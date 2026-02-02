@@ -7,11 +7,16 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// ✅ FAST HEALTH CHECK ROUTE FOR RENDER (VERY IMPORTANT)
+app.get("/", (req, res) => {
+  res.status(200).send("Server is up and running");
+});
+
 // Connect to MongoDB (Atlas for Render)
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected"))
-  .catch((err) => console.log("MongoDB Error:", err));
+  .catch((err) => console.error("MongoDB Error:", err));
 
 const BookSchema = new mongoose.Schema({
   title: String,
@@ -28,6 +33,7 @@ app.get("/books", async (req, res) => {
     const books = await Book.find();
     res.json(books);
   } catch (error) {
+    console.error("GET /books error:", error);
     res.status(500).json({ error: "Error fetching books" });
   }
 });
@@ -38,6 +44,7 @@ app.post("/books", async (req, res) => {
     await book.save();
     res.json(book);
   } catch (error) {
+    console.error("POST /books error:", error);
     res.status(500).json({ error: "Error adding book" });
   }
 });
@@ -49,6 +56,7 @@ app.put("/books/:id", async (req, res) => {
     });
     res.json(updated);
   } catch (error) {
+    console.error("PUT /books/:id error:", error);
     res.status(500).json({ error: "Error updating book" });
   }
 });
@@ -58,11 +66,12 @@ app.delete("/books/:id", async (req, res) => {
     await Book.findByIdAndDelete(req.params.id);
     res.json({ message: "Book deleted" });
   } catch (error) {
+    console.error("DELETE /books/:id error:", error);
     res.status(500).json({ error: "Error deleting book" });
   }
 });
 
-// Start server
+// Start server (Render gives its own PORT)
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
