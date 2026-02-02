@@ -7,16 +7,26 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ FAST HEALTH CHECK ROUTE FOR RENDER (VERY IMPORTANT)
+// ✅ FAST HEALTH CHECK ROUTE FOR RENDER
 app.get("/", (req, res) => {
   res.status(200).send("Server is up and running");
 });
 
+// ✅ Track MongoDB connection state
+let isDbConnected = false;
+
 // Connect to MongoDB (Atlas for Render)
 mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected"))
-  .catch((err) => console.error("MongoDB Error:", err));
+  .connect(process.env.MONGO_URI, {
+    serverSelectionTimeoutMS: 10000, // fail fast instead of hanging forever
+  })
+  .then(() => {
+    console.log("MongoDB Connected");
+    isDbConnected = true;
+  })
+  .catch((err) => {
+    console.error("MongoDB Error:", err);
+  });
 
 const BookSchema = new mongoose.Schema({
   title: String,
@@ -29,6 +39,13 @@ const Book = mongoose.model("Book", BookSchema);
 
 // Routes
 app.get("/books", async (req, res) => {
+  // ✅ IMPORTANT: Don’t query DB unless connected
+  if (!isDbConnected) {
+    return res.status(503).json({
+      error: "Database not connected. Please try again later.",
+    });
+  }
+
   try {
     const books = await Book.find();
     res.json(books);
@@ -39,6 +56,12 @@ app.get("/books", async (req, res) => {
 });
 
 app.post("/books", async (req, res) => {
+  if (!isDbConnected) {
+    return res.status(503).json({
+      error: "Database not connected. Please try again later.",
+    });
+  }
+
   try {
     const book = new Book(req.body);
     await book.save();
@@ -50,6 +73,12 @@ app.post("/books", async (req, res) => {
 });
 
 app.put("/books/:id", async (req, res) => {
+  if (!isDbConnected) {
+    return res.status(503).json({
+      error: "Database not connected. Please try again later.",
+    });
+  }
+
   try {
     const updated = await Book.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
@@ -62,6 +91,12 @@ app.put("/books/:id", async (req, res) => {
 });
 
 app.delete("/books/:id", async (req, res) => {
+  if (!isDbConnected) {
+    return res.status(503).json({
+      error: "Database not connected. Please try again later.",
+    });
+  }
+
   try {
     await Book.findByIdAndDelete(req.params.id);
     res.json({ message: "Book deleted" });
@@ -71,7 +106,7 @@ app.delete("/books/:id", async (req, res) => {
   }
 });
 
-// Start server (Render gives its own PORT)
+// Start server (Render provides PORT)
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
