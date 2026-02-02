@@ -1,13 +1,23 @@
 import axios from "axios";
 
-export default function BookList({ books, fetchBooks, setEditBook }) {
+// ✅ Same Render backend URL (must match App.js & BookForm.js)
+const API_URL =
+  process.env.REACT_APP_API_URL || "https://mern-book-store-e5nz.onrender.com";
 
+export default function BookList({ books, fetchBooks, setEditBook }) {
   const deleteBook = async (id) => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this book?");
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this book?",
+    );
     if (!confirmDelete) return;
 
-    await axios.delete(`http://localhost:5000/books/${id}`);
-    fetchBooks();
+    try {
+      await axios.delete(`${API_URL}/books/${id}`);
+      fetchBooks(); // refresh list
+    } catch (error) {
+      console.error("Error deleting book:", error);
+      alert("Failed to delete book. Check console.");
+    }
   };
 
   return (
