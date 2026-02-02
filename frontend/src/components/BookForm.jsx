@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
+// ✅ Use the same Render backend URL
+const API_URL =
+  process.env.REACT_APP_API_URL || "https://mern-book-store-e5nz.onrender.com";
+
 export default function BookForm({ fetchBooks, editBook }) {
   const [form, setForm] = useState({
     title: "",
@@ -28,19 +32,26 @@ export default function BookForm({ fetchBooks, editBook }) {
       return;
     }
 
-    if (editBook) {
-      await axios.put(`http://localhost:5000/books/${editBook._id}`, form);
-    } else {
-      await axios.post("http://localhost:5000/books", form);
-    }
+    try {
+      if (editBook) {
+        await axios.put(`${API_URL}/books/${editBook._id}`, form);
+      } else {
+        await axios.post(`${API_URL}/books`, form);
+      }
 
-    fetchBooks();
-    setForm({
-      title: "",
-      author: "",
-      description: "",
-      publisherYear: "",
-    });
+      fetchBooks(); // refresh list
+
+      // Clear form
+      setForm({
+        title: "",
+        author: "",
+        description: "",
+        publisherYear: "",
+      });
+    } catch (error) {
+      console.error("Error submitting book:", error);
+      alert("Failed to save book. Check console.");
+    }
   };
 
   return (
